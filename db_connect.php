@@ -1,7 +1,7 @@
 <?php
-$serverName = "localhost"; // or "localhost\\SQLEXPRESS"
+$serverName = "localhost";
 $connectionOptions = [
-    "Database" => "baloonDBv7", // your database name
+    "Database" => "baloonDBv7", 
     "Uid" => "",
     "PWD" => ""
 ];
