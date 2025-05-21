@@ -1,7 +1,7 @@
 <?php
 $serverName = "localhost";
 $connectionOptions = [
-    "Database" => "baloonDBv7", 
+    "Database" => "BaloonLK", 
     "Uid" => "",
     "PWD" => ""
 ];

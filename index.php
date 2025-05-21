@@ -1,3 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Products</title>
+    <style>
+        table { border-collapse: collapse; width: 60%; margin: 20px auto; }
+        th, td { border: 1px solid #ccc; padding: 8px 12px; text-align: center; }
+        th { background: #f4f4f4; }
+    </style>
+</head>
+<body>
 <?php
 include 'db_connect.php';
 
@@ -8,7 +20,7 @@ if ($stmt === false) {
     die(print_r(sqlsrv_errors(), true));
 }
 
-echo "<h2>Products</h2><table border='1'>
+echo "<h2 style='text-align:center;'>Products</h2><table>
 <tr><th>ID</th><th>Name</th><th>Price</th><th>Stock</th></tr>";
 
 while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
@@ -22,3 +34,5 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
 
 echo "</table>";
 ?>
+</body>
+</html>
