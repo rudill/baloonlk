@@ -354,7 +354,7 @@ if (isset($_GET['get_customer'])) {
 								<th>Unit Price</th>
 								<th>Quantity</th>
 								<th>Total</th>
-								
+								<th>Total Order Price</th>
 								<th>Customer</th>
 								
 								<th>Payment</th>
@@ -371,7 +371,7 @@ if (isset($_GET['get_customer'])) {
 									<td>{$row['productPrice']}</td>
 									<td>{$row['itemQuantity']}</td>
 									<td>{$row['TotalPrice']}</td>
-									
+									<td>{$row['OrderTotalPrice']}</td>
 									<td>{$row['customerName']}</td>
 									
 									<td>{$row['paymentMethod']}</td>
@@ -449,7 +449,7 @@ if (isset($_GET['get_customer'])) {
 								<th>Unit Price</th>
 								<th>Quantity</th>
 								<th>Total</th>
-								
+								<th>Total Order Price</th>
 								<th>Customer</th>
 							
 								<th>Payment</th>
@@ -467,6 +467,7 @@ if (isset($_GET['get_customer'])) {
 									<td>{$row['productPrice']}</td>
 									<td>{$row['itemQuantity']}</td>
 									<td>{$row['TotalPrice']}</td>
+									<td>{$row['OrderTotalPrice']}</td>
 								
 									<td>{$row['customerName']}</td>
 									
@@ -519,6 +520,7 @@ if (isset($_GET['get_customer'])) {
 								<th>Unit Price</th>
 								<th>Quantity</th>
 								<th>Total</th>
+								<th>Total Order Price</th>
 							
 								<th>Customer</th>
 								
@@ -535,7 +537,7 @@ if (isset($_GET['get_customer'])) {
 									<td>{$row['productPrice']}</td>
 									<td>{$row['itemQuantity']}</td>
 									<td>{$row['TotalPrice']}</td>
-									
+									<td>{$row['OrderTotalPrice']}</td>
 									<td>{$row['customerName']}</td>
 									
 									<td>{$row['paymentMethod']}</td>
