@@ -2,6 +2,24 @@
 <html lang="en" data-bs-theme="auto">
 <?php
 include 'db_connect.php';
+
+if (isset($_GET['get_customer'])) {
+    $customerID = $_GET['get_customer'];
+    $sql = "SELECT * FROM dbo.CustomerDetails(?)";
+    $params = array($customerID);
+    $stmt = sqlsrv_query($conn, $sql, $params);
+    if ($stmt && ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC))) {
+        echo "<strong>Customer ID:</strong> {$row['customerID']}<br>";
+        echo "<strong>Name:</strong> {$row['customerName']}<br>";
+        echo "<strong>Email:</strong> {$row['email']}<br>";
+        echo "<strong>Address:</strong> {$row['address']}<br>";
+        echo "<strong>Contact No:</strong> {$row['customercontactNo']}<br>";
+    } else {
+        echo "<div class='alert alert-warning'>Customer details not found.</div>";
+    }
+    exit;
+}
+
 ?>
 
 <head>
@@ -48,10 +66,7 @@ include 'db_connect.php';
 		</div>
 
 		<div class="btn-toolbar mb-2 mb-md-0">
-			<div class="btn-group me-2">
-				<!-- <button type="button" class="btn btn-sm btn-outline-secondary">Share</button> -->
-				<button type="button" class="btn btn-sm btn-outline-secondary">Export</button>
-			</div>
+			
 			<!-- <button
 				type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle d-flex align-items-center gap-1">
 				<svg class="bi" aria-hidden="true">
@@ -98,14 +113,7 @@ include 'db_connect.php';
 									Products
 								</a>
 							</li>
-							<li class="nav-item">
-								<a class="nav-link d-flex align-items-center gap-2" href="#customers">
-									<svg class="bi" aria-hidden="true">
-										<use xlink:href="#people"></use>
-									</svg>
-									Customers
-								</a>
-							</li>
+							
 							<!-- Add more as needed -->
 						</ul>
 					</div>
@@ -124,13 +132,97 @@ include 'db_connect.php';
 					<!-- <h2>Dashboard</h2> -->
 					<!-- Dashboard content here -->
 
+
+
+
 					<?php
-					$sql = "SELECT P.productName, SUM(OI.itemQuantity * OIP.unitPrice) AS totalSales
-							FROM OrderItem OI
-							JOIN Product P ON OI.productID = P.productID
-							JOIN OrderItem_Price OIP ON OI.productID = OIP.productID
-							GROUP BY P.productName
-							ORDER BY totalSales DESC";
+					// Total sales this month
+					$salesMonth = 0;
+					$sql = "SELECT SUM(OI.itemQuantity * P.productPrice) AS salesMonth
+					FROM Bill B
+					JOIN Orders O ON B.orderID = O.orderID
+					JOIN OrderItem OI ON O.orderID = OI.orderID
+					JOIN Product P ON OI.productID = P.productID
+					WHERE FORMAT(O.orderDate, 'yyyy-MM') = FORMAT(GETDATE(), 'yyyy-MM')";
+					$stmt = sqlsrv_query($conn, $sql);
+					if ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+						$salesMonth = $row['salesMonth'] ?? 0;
+					}
+
+					// Number of orders
+					$orderCount = 0;
+					$sql = "SELECT COUNT(*) AS orderCount FROM Orders";
+					$stmt = sqlsrv_query($conn, $sql);
+					if ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+						$orderCount = $row['orderCount'] ?? 0;
+					}
+
+					// Number of customers
+					$customerCount = 0;
+					$sql = "SELECT COUNT(*) AS customerCount FROM Customer";
+					$stmt = sqlsrv_query($conn, $sql);
+					if ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+						$customerCount = $row['customerCount'] ?? 0;
+					}
+
+					// Products low in stock (e.g., stock <= 5)
+					$lowStock = 0;
+					$sql = "SELECT COUNT(*) AS lowStock FROM Product WHERE productStock <= 5";
+					$stmt = sqlsrv_query($conn, $sql);
+					if ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+						$lowStock = $row['lowStock'] ?? 0;
+					}
+					?>
+
+					<div class="row my-4">
+						<div class="col-md-3 mb-3">
+							<div class="card text-bg-primary h-100">
+								<div class="card-body">
+									<h6 class="card-title">Total Sales This Month</h6>
+									<h3 class="card-text">LKR <?php echo number_format($salesMonth, 2); ?></h3>
+								</div>
+							</div>
+						</div>
+						<div class="col-md-3 mb-3">
+							<div class="card text-bg-success h-100">
+								<div class="card-body">
+									<h6 class="card-title">Number of Orders</h6>
+									<h3 class="card-text"><?php echo $orderCount; ?></h3>
+								</div>
+							</div>
+						</div>
+						<div class="col-md-3 mb-3">
+							<div class="card text-bg-info h-100">
+								<div class="card-body">
+									<h6 class="card-title">Number of Customers</h6>
+									<h3 class="card-text"><?php echo $customerCount; ?></h3>
+								</div>
+							</div>
+						</div>
+						<div class="col-md-3 mb-3">
+							<div class="card text-bg-danger h-100">
+								<div class="card-body">
+									<h6 class="card-title">Products Low in Stock</h6>
+									<h3 class="card-text"><?php echo $lowStock; ?></h3>
+								</div>
+							</div>
+						</div>
+					</div>
+
+
+
+
+
+
+
+					<?php
+					$sql = "SELECT 
+							P.productName, 
+							SUM(OI.itemQuantity * P.productPrice) AS totalSales
+						FROM OrderItem OI
+						JOIN Product P ON OI.productID = P.productID
+						GROUP BY P.productName
+						ORDER BY totalSales DESC";
 
 
 
@@ -150,28 +242,28 @@ include 'db_connect.php';
 					?>
 
 					<?php
-						$monthlyRevenueSql = "SELECT 
-										FORMAT(B.billDate, 'yyyy-MM') AS Month,
-										SUM(OI.itemQuantity * OIP.unitPrice) AS MonthlyRevenue
-									FROM Bill B
-									JOIN Orders O ON B.orderID = O.orderID
-									JOIN OrderItem OI ON O.orderID = OI.orderID
-									JOIN OrderItem_Price OIP ON OI.productID = OIP.productID
-									GROUP BY FORMAT(B.billDate, 'yyyy-MM')
-									ORDER BY Month;";	
+					$monthlyRevenueSql = "SELECT 
+											FORMAT(O.orderDate, 'yyyy-MM') AS Month,
+											SUM(OI.itemQuantity * P.productPrice) AS MonthlyRevenue
+										FROM Bill B
+										JOIN Orders O ON B.orderID = O.orderID
+										JOIN OrderItem OI ON O.orderID = OI.orderID
+										JOIN Product P ON OI.productID = P.productID
+										GROUP BY FORMAT(O.orderDate, 'yyyy-MM')
+										ORDER BY Month;;";
 
-									$stmt = sqlsrv_query($conn, $monthlyRevenueSql);
+					$stmt = sqlsrv_query($conn, $monthlyRevenueSql);
 
-									$monthlyRevenue = [];
-									$months = [];
-									while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-										$months[] = $row["Month"];
-										$monthlyRevenue[] = $row["MonthlyRevenue"];
-									}
-						?>
+					$monthlyRevenue = [];
+					$months = [];
+					while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+						$months[] = $row["Month"];
+						$monthlyRevenue[] = $row["MonthlyRevenue"];
+					}
+					?>
 
 					<h2>Product Sales Chart</h2>
-					<canvas id="salesChart" width="400" height="200"></canvas>
+					<canvas id="salesChart" width="400" height="150"></canvas>
 					<h2>Monthly Revenue</h2>
 					<canvas id="monthlyRevenueChart" width="400" height="200"></canvas>
 
@@ -229,68 +321,294 @@ include 'db_connect.php';
 
 
 				</div>
+
+				<!-- Orders Section with Tabs -->
 				<div id="orders" class="content-section" style="display:none;">
-					<!-- <h2>Orders</h2> -->
+					<ul class="nav nav-tabs mb-3" id="orderTabs" role="tablist">
+						<li class="nav-item" role="presentation">
+							<button class="nav-link active" id="pending-tab" data-bs-toggle="tab"
+								data-bs-target="#pending-orders" type="button" role="tab">Pending</button>
+						</li>
+						<li class="nav-item" role="presentation">
+							<button class="nav-link" id="accepted-tab" data-bs-toggle="tab"
+								data-bs-target="#accepted-orders" type="button" role="tab">Accepted</button>
+						</li>
+						<li class="nav-item" role="presentation">
+							<button class="nav-link" id="completed-tab" data-bs-toggle="tab"
+								data-bs-target="#completed-orders" type="button" role="tab">Completed</button>
+						</li>
+					</ul>
+					<div class="tab-content">
+						<!-- Pending Orders Table -->
+						<div class="tab-pane fade show active" id="pending-orders" role="tabpanel">
+							<?php
+							$sql = "SELECT * FROM GetPendingOrders;";
+							$stmt = sqlsrv_query($conn, $sql);
+							echo "<h2>Pending Orders</h2>";
+							echo "<div class='table-responsive'>";
+							echo "<table class='table table-striped table-bordered align-middle'>";
+							echo "<thead class='table-dark'><tr>
+								<th>Order ID</th>
+								<th>Date</th>
+								<th>Product</th>
+								<th>Unit Price</th>
+								<th>Quantity</th>
+								<th>Total</th>
+								
+								<th>Customer</th>
+								
+								<th>Payment</th>
+								<th>Status</th>
+								
+							</tr></thead><tbody>";
+							$hasRows = false;
+							while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+								$hasRows = true;
+								echo "<tr>
+									<td>{$row['orderID']}</td>
+									<td>" . ($row['orderDate'] ? $row['orderDate']->format('Y-m-d') : '') . "</td>
+									<td>{$row['productName']}</td>
+									<td>{$row['productPrice']}</td>
+									<td>{$row['itemQuantity']}</td>
+									<td>{$row['TotalPrice']}</td>
+									
+									<td>{$row['customerName']}</td>
+									
+									<td>{$row['paymentMethod']}</td>
+									<td>{$row['status']}</td>
+									<td>
+										<form method='post' style='display:inline;'>
+											<input type='hidden' name='accept_order_id' value='{$row['orderID']}'>
+											<button type='submit' class='btn btn-success btn-sm'>Accept</button>
+										</form>
+									</td>
+									
+										     </form>
+									</td>
+									<td>
+										<button 
+											type=\"button\" 
+											class=\"btn btn-info btn-sm\" 
+											onclick=\"showCustomerModal('{$row['customerID']}')\">
+											View Customer
+										</button>
+									</td>
+									</tr>";
+							}
+							if (!$hasRows) {
+								echo "<tr><td colspan='11' class='text-center'>No pending orders found.</td></tr>";
+							}
+							echo "</tbody></table></div>";
+							?>
+							<?php
+							if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accept_order_id'])) {
+								$orderId = $_POST['accept_order_id'];
+								$adminId = 'ADM02'; // Replace with the logged-in admin's ID if available
+								$sqlAccept = "EXEC AcceptedOrder @adminid = ?, @orderid = ?";
+								$params = array($adminId, $orderId);
+								$stmtAccept = sqlsrv_query($conn, $sqlAccept, $params);
+								if ($stmtAccept === false) {
+									echo "<div class='alert alert-danger'>Failed to accept order: " . print_r(sqlsrv_errors(), true) . "</div>";
+								} else {
+									echo "<div class='alert alert-success'>Order $orderId accepted!</div>";
+								}
+							}
+							?>
 
 
-					<?php
+							<!-- Customer Details Modal -->
+							<div class="modal fade" id="customerModal" tabindex="-1"
+								aria-labelledby="customerModalLabel" aria-hidden="true">
+								<div class="modal-dialog">
+									<div class="modal-content">
+										<div class="modal-header">
+											<h5 class="modal-title" id="customerModalLabel">Customer Details</h5>
+											<button type="button" class="btn-close" data-bs-dismiss="modal"
+												aria-label="Close"></button>
+										</div>
+										<div class="modal-body" id="customerModalBody">
+											<!-- Customer details will be loaded here -->
+										</div>
+									</div>
+								</div>
+							</div>
 
-					$sql = "SELECT * FROM GetPendingOrders;";
-					$stmt = sqlsrv_query($conn, $sql);
+						</div>
+						<!-- Accepted Orders Table -->
+						<div class="tab-pane fade" id="accepted-orders" role="tabpanel">
+							<?php
+							$sql = "SELECT * FROM GetAcceptedOrders;"; // Create this view or procedure for accepted orders
+							$stmt = sqlsrv_query($conn, $sql);
+							echo "<h2>Accepted Orders</h2>";
+							echo "<div class='table-responsive'>";
+							echo "<table class='table table-striped table-bordered align-middle'>";
+							echo "<thead class='table-dark'><tr>
+								<th>Order ID</th>
+								<th>Date</th>
+								<th>Product</th>
+								<th>Unit Price</th>
+								<th>Quantity</th>
+								<th>Total</th>
+								
+								<th>Customer</th>
+							
+								<th>Payment</th>
+								<th>Status</th>
+								<th>Admin Name</th>
+								
+							</tr></thead><tbody>";
+							$hasRows = false;
+							while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+								$hasRows = true;
+								echo "<tr>
+									<td>{$row['orderID']}</td>
+									<td>" . ($row['orderDate'] ? $row['orderDate']->format('Y-m-d') : '') . "</td>
+									<td>{$row['productName']}</td>
+									<td>{$row['productPrice']}</td>
+									<td>{$row['itemQuantity']}</td>
+									<td>{$row['TotalPrice']}</td>
+								
+									<td>{$row['customerName']}</td>
+									
+									<td>{$row['paymentMethod']}</td>
+									<td>{$row['status']}</td>
+									<td>{$row['AcceptedBy']}</td>
+									<td>
+										<form method='post' style='display:inline;'>
+											<input type='hidden' name='complete_order_id' value='{$row['orderID']}'>
+											<button type='submit' class='btn btn-success btn-sm'>Complete</button>
+										</form>
+									</td>
+								</tr>";
+							}
+							if (!$hasRows) {
+								echo "<tr><td colspan='11' class='text-center'>No accepted orders found.</td></tr>";
+							}
+							echo "</tbody></table></div>";
+							?>
 
-					if ($stmt === false) {
-						die("<div class='alert alert-danger'>Database error: " . print_r(sqlsrv_errors(), true) . "</div>");
-					}
-
-					echo "<h2>Pending Orders</h2>";
-					echo "<div class='table-responsive'>";
-					echo "<table class='table table-striped table-bordered align-middle'>";
-					echo "<thead class='table-dark'><tr>
-						<th>Order ID</th>
-						<th>Date</th>
-						<th>Product</th>
-						<th>Unit Price</th>
-						<th>Quantity</th>
-						<th>Total</th>
-						<th>Customer</th>
-						<th>Email</th>
-						<th>Payment</th>
-						<th>Status</th>
-					</tr></thead><tbody>";
-
-					$hasRows = false;
-					while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-						$hasRows = true;
-						echo "<tr>
-					<td>{$row['orderID']}</td>
-					<td>" . ($row['orderDate'] ? $row['orderDate']->format('Y-m-d') : '') . "</td>
-					<td>{$row['productName']}</td>
-					<td>{$row['unitPrice']}</td>
-					<td>{$row['itemQuantity']}</td>
-					<td>{$row['TotalPrice']}</td>
-					<td>{$row['customerName']}</td>
-					<td>{$row['email']}</td>
-					<td>{$row['PaymentMethod']}</td>
-					<td>{$row['status']}</td>
-				</tr>";
-					}
-					if (!$hasRows) {
-						echo "<tr><td colspan='10' class='text-center'>No pending orders found.</td></tr>";
-					}
-					echo "</tbody></table></div>";
-					?>
+							<?php
+							if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_order_id'])) {
+								$orderId = $_POST['complete_order_id'];
+								$adminId = 'ADM02'; // Replace with the logged-in admin's ID if available
+								$sqlComplete = "EXEC CompletedOrder @adminid = ?, @orderid = ?";
+								$params = array($adminId, $orderId);
+								$stmtAccept = sqlsrv_query($conn, $sqlComplete, $params);
+								if ($stmtAccept === false) {
+									echo "<div class='alert alert-danger'>Failed to complete order: " . print_r(sqlsrv_errors(), true) . "</div>";
+								} else {
+									echo "<div class='alert alert-success'>Order $orderId completed!</div>";
+								}
+							}
+							?>
 
 
-
-
-
-
-
+						</div>
+						<!-- Completed Orders Table -->
+						<div class="tab-pane fade" id="completed-orders" role="tabpanel">
+							<?php
+							$sql = "SELECT * FROM GetCompletedOrders;"; // Create this view or procedure for completed orders
+							$stmt = sqlsrv_query($conn, $sql);
+							echo "<h2>Completed Orders</h2>";
+							echo "<div class='table-responsive'>";
+							echo "<table class='table table-striped table-bordered align-middle'>";
+							echo "<thead class='table-dark'><tr>
+								<th>Order ID</th>
+								<th>Date</th>
+								<th>Product</th>
+								<th>Unit Price</th>
+								<th>Quantity</th>
+								<th>Total</th>
+							
+								<th>Customer</th>
+								
+								<th>Payment</th>
+								<th>Status</th>
+							</tr></thead><tbody>";
+							$hasRows = false;
+							while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+								$hasRows = true;
+								echo "<tr>
+									<td>{$row['orderID']}</td>
+									<td>" . ($row['orderDate'] ? $row['orderDate']->format('Y-m-d') : '') . "</td>
+									<td>{$row['productName']}</td>
+									<td>{$row['productPrice']}</td>
+									<td>{$row['itemQuantity']}</td>
+									<td>{$row['TotalPrice']}</td>
+									
+									<td>{$row['customerName']}</td>
+									
+									<td>{$row['paymentMethod']}</td>
+									<td>{$row['status']}</td>
+								</tr>";
+							}
+							if (!$hasRows) {
+								echo "<tr><td colspan='11' class='text-center'>No completed orders found.</td></tr>";
+							}
+							echo "</tbody></table></div>";
+							?>
+						</div>
+					</div>
 				</div>
 				<div id="products" class="content-section" style="display:none;">
 					<!-- <h2>Products</h2> -->
 					<!-- Products table or content here -->
 
+
+
+					<div class="card my-4">
+						<div class="card-header bg-success text-white">Add Supplier Supply</div>
+						<div class="card-body">
+							<form method="post">
+								<div class="row">
+									<div class="col-md-3 mb-2">
+										<label for="supply_supplier_id" class="form-label">Supplier ID</label>
+										<select class="form-control" name="supply_supplier_id" id="supply_supplier_id"
+											required>
+											<option value="">Select Supplier</option>
+											<option value="101">101 - Kamal Perera</option>
+											<option value="102">102 - Dilshan Cooray</option>
+											<option value="103">103 - Tech Lanka Pvt Ltd</option>
+										</select>
+									</div>
+									<div class="col-md-3 mb-2">
+										<label for="supply_product_id" class="form-label">Product ID</label>
+										<input type="number" class="form-control" name="supply_product_id"
+											id="supply_product_id" required>
+									</div>
+									<div class="col-md-3 mb-2">
+										<label for="supply_date" class="form-label">Supply Date</label>
+										<input type="date" class="form-control" name="supply_date" id="supply_date"
+											required>
+									</div>
+									<div class="col-md-3 mb-2">
+										<label for="supply_quantity" class="form-label">Quantity</label>
+										<input type="number" class="form-control" name="supply_quantity"
+											id="supply_quantity" min="1" required>
+									</div>
+								</div>
+								<button type="submit" name="add_supply" class="btn btn-success mt-2">Add
+									Supply</button>
+							</form>
+							<?php
+							if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_supply'])) {
+								$supplierID = intval($_POST['supply_supplier_id']);
+								$productID = intval($_POST['supply_product_id']);
+								$supplyDate = $_POST['supply_date'];
+								$quantity = intval($_POST['supply_quantity']);
+								$sql = "INSERT INTO supplier_product (supplierID, productID, supplyDate, productQuantity) VALUES (?, ?, ?, ?)";
+								$params = array($supplierID, $productID, $supplyDate, $quantity);
+								$stmt = sqlsrv_query($conn, $sql, $params);
+								if ($stmt) {
+									echo "<div class='alert alert-success mt-2'>Supply added and product stock increased by trigger.</div>";
+								} else {
+									echo "<div class='alert alert-danger mt-2'>Error: " . htmlspecialchars(print_r(sqlsrv_errors(), true)) . "</div>";
+								}
+							}
+							?>
+						</div>
+					</div>
+				
 
 
 					<?php
@@ -326,6 +644,7 @@ include 'db_connect.php';
 								<th>Product Name</th>
 								<th>Category Type</th>
 								<th>Product Stock</th>
+								<th>Status</th>
 								<th>Action</th>
 							</tr></thead><tbody>";
 
@@ -338,6 +657,7 @@ include 'db_connect.php';
 								<td>{$row['ProductName']}</td>
 								<td>{$row['categoryType']}</td>
 								<td>{$row['productStock']}</td>
+								<td>{$row['AvailabilityStatus']}</td>
 								<td>
 									<button class='btn btn-sm btn-primary' onclick='showStockModal($pid)'>Update Stock</button>
 								</td>
@@ -362,7 +682,8 @@ include 'db_connect.php';
 								<div class="modal-body">
 									<input type="hidden" name="modal_product_id" id="modal_product_id">
 									<div class="mb-3">
-										<label for="modal_new_stock" class="form-label">Stock Change (use negative to
+										<label for="modal_new_stock" class="form-label">Stock Change (use negative
+											to
 											decrease)</label>
 										<input type="number" class="form-control" name="modal_new_stock"
 											id="modal_new_stock" required>
@@ -381,10 +702,7 @@ include 'db_connect.php';
 
 
 				</div>
-				<div id="customers" class="content-section" style="display:none;">
-					<h2>Customers</h2>
-					<h1>hello</h1>
-				</div>
+				
 
 			</main>
 
@@ -395,20 +713,20 @@ include 'db_connect.php';
 	</div>
 
 	<script>
-		document.querySelectorAll('.nav-link').forEach(link => {
+		document.querySelectorAll('.sidebar .nav-link').forEach(link => {
 			link.addEventListener('click', function (e) {
 				e.preventDefault();
-				// Remove 'active' from all links
-				document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+				// Remove 'active' from all sidebar links
+				document.querySelectorAll('.sidebar .nav-link').forEach(l => l.classList.remove('active'));
 				this.classList.add('active');
-				// Hide all sections
+				// Hide all main sections
 				document.querySelectorAll('.content-section').forEach(div => div.style.display = 'none');
 				// Show the selected section
 				const section = document.querySelector(this.getAttribute('href'));
 				if (section) section.style.display = 'block';
 			});
 		});
-		// Optionally, show the first section by default
+		// Show the first section by default
 		document.querySelector('.content-section').style.display = 'block';
 	</script>
 
@@ -421,3 +739,15 @@ include 'db_connect.php';
 			modal.show();
 		}
 	</script>
+
+	<script>
+			function showCustomerModal(customerID) {
+				fetch(window.location.pathname + '?get_customer=' + encodeURIComponent(customerID))
+					.then(response => response.text())
+					.then(html => {
+						document.getElementById('customerModalBody').innerHTML = html;
+						var modal = new bootstrap.Modal(document.getElementById('customerModal'));
+						modal.show();
+					});
+			}
+</script>
