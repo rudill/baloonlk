@@ -167,28 +167,7 @@ END
 
  
 
--- CREATE VIEW GetAcceptedOrders
--- AS
--- SELECT 
---     O.orderID,
---     O.orderDate,
---     P.productName,
---     P.productPrice,
---     OI.itemQuantity,
---     (OI.itemQuantity * P.productPrice) AS TotalPrice,
---     C.customerID,
---     C.customerName,
---     C.email,
---     O.paymentMethod,
---     O.status,
--- 	ad.adminName AS AcceptedBy
 
--- FROM Orders O
--- JOIN Customer C ON O.customerID = C.customerID
--- JOIN OrderItem OI ON O.orderID = OI.orderID
--- JOIN Product P ON OI.productID = P.productID
--- JOIN Admin ad ON O.adminID = ad.adminID
--- WHERE O.status = 'Accepted';
 
 
 
